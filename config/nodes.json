@@ -1,0 +1,35 @@
+{
+  "nodes": [
+    {
+      "app_id": "node-local-001",
+      "name": "本地服务器",
+      "role": "node",
+      "ip": "127.0.0.1",
+      "port": 22,
+      "url": "http://127.0.0.1:22",
+      "capabilities": [],
+      "status": "online",
+      "latency_ms": 0,
+      "load": 0.0,
+      "last_heartbeat": 0,
+      "created_at": 1773418115.8837001
+    },
+    {
+      "app_id": "node_b2ec95",
+      "name": "上海服务器",
+      "role": "node",
+      "ip": "192.168.1.100",
+      "port": 18789,
+      "url": "http://192.168.1.100:18789",
+      "capabilities": [
+        "code",
+        "search"
+      ],
+      "status": "offline",
+      "latency_ms": 0,
+      "load": 0.0,
+      "last_heartbeat": 0,
+      "created_at": 1773418115.8853428
+    }
+  ]
+}
