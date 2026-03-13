@@ -9,11 +9,19 @@ import json
 from pathlib import Path
 from typing import List, Dict, Any, Optional
 
-from .auth.auth import AuthSystem, init_master, register_node
-from .registry import NodeRegistry
-from .http_client import HttpClient
-from .router import Router, TaskRequest
-from .gateway.gateway import Gateway
+import sys
+from pathlib import Path
+
+# 添加scripts目录到路径
+_script_dir = Path(__file__).parent
+if str(_script_dir) not in sys.path:
+    sys.path.insert(0, str(_script_dir))
+
+from auth.auth import AuthSystem, init_master, register_node
+from registry import NodeRegistry
+from http_client import HttpClient
+from router import Router, TaskRequest
+from gateway.gateway import Gateway
 
 
 class OpenClawConnect:

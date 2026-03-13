@@ -6,8 +6,8 @@
 import asyncio
 from typing import List, Dict, Any, Optional
 from dataclasses import dataclass
-from .registry import NodeRegistry, Node
-from .http_client import HttpClient, NodeResponse
+from registry import NodeRegistry, Node
+from http_client import HttpClient, NodeResponse
 
 
 @dataclass
@@ -242,7 +242,7 @@ class TaskQueue:
 def create_router(registry: NodeRegistry = None, http_client: HttpClient = None) -> Router:
     """创建路由器"""
     if registry is None:
-        from .registry import create_registry
+        from registry import create_registry
         registry = create_registry()
     if http_client is None:
         http_client = HttpClient()

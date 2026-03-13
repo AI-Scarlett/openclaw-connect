@@ -6,8 +6,8 @@
 import asyncio
 from typing import List, Optional, Dict, Any
 from dataclasses import dataclass
-from .registry import NodeRegistry, Node
-from .http_client import HttpClient, NodeResponse
+from registry import NodeRegistry, Node
+from http_client import HttpClient, NodeResponse
 
 
 @dataclass

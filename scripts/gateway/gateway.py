@@ -59,16 +59,30 @@ class Gateway:
         try:
             data = await request.json()
             app_id = data.get('app_id', '')
+            token = data.get('token', '')
             key = data.get('key', '')
             
-            result = self.auth.verify_key(app_id, key)
+            # 优先验证 token（master用），其次验证 key（node用）
+            result = None
+            auth_type = None
+            
+            if token:
+                if self.auth.verify_token(app_id, token):
+                    result = self.auth.get_node(app_id)
+                    auth_type = "token"
+            
+            if not result and key:
+                if self.auth.verify_key(app_id, key):
+                    result = self.auth.get_node(app_id)
+                    auth_type = "key"
+            
             if result:
-                node = self.auth.get_node(app_id)
                 return web.json_response({
                     "success": True,
                     "app_id": app_id,
-                    "name": node.name if node else "",
-                    "role": node.role if node else ""
+                    "name": result.name if result else "",
+                    "role": result.role if result else "",
+                    "auth_type": auth_type
                 })
             return web.json_response({"success": False, "error": "认证失败"}, status=401)
         except Exception as e:
@@ -259,8 +273,8 @@ async def start_gateway(auth_system, node_registry, host: str = "0.0.0.0", port:
 
 def create_gateway(config_path: str = None) -> Gateway:
     """创建网关"""
-    from .auth.auth import create_auth
-    from .registry import create_registry
+    from auth.auth import create_auth
+    from registry import create_registry
     
     auth = create_auth(config_path)
     registry = create_registry(config_path)

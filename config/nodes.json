@@ -25,10 +25,10 @@
         "code",
         "search"
       ],
-      "status": "offline",
+      "status": "online",
       "latency_ms": 0,
       "load": 0.0,
-      "last_heartbeat": 0,
+      "last_heartbeat": 1773445475.2835386,
       "created_at": 1773418115.8853428
     }
   ]
