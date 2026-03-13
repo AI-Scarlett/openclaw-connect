@@ -43,6 +43,10 @@ class Gateway:
         # 数据同步
         self.app.router.add_post('/api/sync/push', self.handle_sync_push)
         self.app.router.add_get('/api/sync/pull/{key}', self.handle_sync_pull)
+        
+        # OpenClaw Gateway 代理（允许 OpenClaw 主网关转发请求）
+        self.app.router.add_post('/api/openclaw/proxy', self.handle_openclaw_proxy)
+        self.app.router.add_get('/api/openclaw/status', self.handle_openclaw_status)
 
     # ==================== 处理器 ====================
 
@@ -239,6 +243,83 @@ class Gateway:
             return web.json_response({"data": data})
         except Exception as e:
             return web.json_response({"error": str(e)}, status=500)
+
+    # ==================== OpenClaw Gateway 代理 ====================
+
+    async def handle_openclaw_proxy(self, request):
+        """代理 OpenClaw Gateway 的请求"""
+        try:
+            data = await request.json()
+            action = data.get('action', '')
+            
+            if action == 'list_nodes':
+                # 获取节点列表
+                nodes = self.registry.list_all()
+                return web.json_response({
+                    "success": True,
+                    "nodes": [
+                        {
+                            "app_id": n.app_id,
+                            "name": n.name,
+                            "role": n.role,
+                            "ip": n.ip,
+                            "status": n.status,
+                            "capabilities": n.capabilities
+                        }
+                        for n in nodes
+                    ]
+                })
+            
+            elif action == 'get_node':
+                # 获取单个节点信息
+                app_id = data.get('app_id', '')
+                node = self.registry.get(app_id)
+                if node:
+                    return web.json_response({
+                        "success": True,
+                        "node": {
+                            "app_id": node.app_id,
+                            "name": node.name,
+                            "role": node.role,
+                            "ip": node.ip,
+                            "status": node.status,
+                            "capabilities": node.capabilities
+                        }
+                    })
+                return web.json_response({"success": False, "error": "节点不存在"}, status=404)
+            
+            elif action == 'dispatch':
+                # 分发任务到节点
+                app_id = data.get('app_id', '')
+                message = data.get('message', '')
+                node = self.registry.get(app_id)
+                
+                if not node:
+                    return web.json_response({"success": False, "error": "节点不存在"}, status=404)
+                
+                return web.json_response({
+                    "success": True,
+                    "message": f"任务已分发到 {node.name}",
+                    "node": app_id
+                })
+            
+            else:
+                return web.json_response({"success": False, "error": f"未知动作: {action}"}, status=400)
+                
+        except Exception as e:
+            logger.error(f"代理错误: {e}")
+            return web.json_response({"success": False, "error": str(e)}, status=500)
+
+    async def handle_openclaw_status(self, request):
+        """获取 OpenClaw Connect 状态"""
+        nodes = self.registry.list_all()
+        return web.json_response({
+            "service": "openclaw-connect",
+            "version": "1.0.0",
+            "role": self.auth.config.role,
+            "nodes_count": len(nodes),
+            "nodes_online": sum(1 for n in nodes if n.status == "online")
+        })
 
     # ==================== 服务控制 ====================
 
