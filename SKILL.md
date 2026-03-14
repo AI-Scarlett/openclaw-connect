@@ -1,85 +1,201 @@
----
-name: openclaw-connect
-version: 1.0.0
-description: OpenClaw 多实例协作连接器 - 最简方案，通过 SSH 控制远程服务器上的 OpenClaw
----
+# OpenClaw Connect - 安全协作连接器
 
-# openclaw-connect v1.0.0
-
-> 最简单的多服务器 OpenClaw 联合协作方案
-
-## 🎯 特点
-
-- **零额外配置** - 不需要开启 Gateway 外网访问
-- **SSH 即插即用** - 只需提供服务器 SSH 登录信息
-- **一键添加节点** - 添加节点只需 3 行代码
-- **统一任务分发** - 像本地任务一样分发到远程
-
-## 📡 工作原理
-
-```
-本地 OpenClaw ──SSH──► 远程服务器 ──► OpenClaw 命令
-                              │
-                              └─► 执行任务，结果返回
-```
-
-通过 SSH 在远程服务器执行 `openclaw send` 命令，实现任务分发。
-
-## 🚀 使用方式
-
-```python
-from scripts.connect import OpenClawConnect
-
-# 初始化
-connect = OpenClawConnect()
-
-# 添加节点（首次需要）
-await connect.add_node(
-    name="上海服务器",
-    host="192.168.1.100",
-    username="root",
-    password="xxx",  # 或使用 key_path
-    location="上海"
-)
-
-# 分发任务（和本地一样简单）
-result = await connect.dispatch(
-    node="上海服务器",
-    message="帮我写一首诗"
-)
-
-# 查看所有节点状态
-statuses = await connect.status()
-```
-
-## ⚙️ 配置
-
-节点信息保存在 `config/nodes.json`：
-
-```json
-{
-  "ssh_nodes": [
-    {
-      "id": "node-001",
-      "name": "服务器名称",
-      "host": "192.168.1.100",
-      "username": "root",
-      "password": "xxx",
-      "port": 22,
-      "location": "城市",
-      "region": "区域"
-    }
-  ]
-}
-```
-
-## ⚡ 注意
-
-- 需要远程服务器开启 SSH 访问
-- 建议使用 SSH 密钥认证，更安全
-- 确保 SSH 用户有权限执行 openclaw 命令
+**多实例 OpenClaw 安全协作系统，支持 AppID + Token + Key 三层认证**
 
 ---
 
-*By 斯嘉丽 Scarlett*
-*一句话：把远程服务器变成你的计算节点！*
+## 📋 概述
+
+OpenClaw Connect 是用于多 OpenClaw 实例安全协作的系统，通过 REST API 实现节点发现、任务分发和状态同步。
+
+### 核心特性
+
+- 🔐 **三层认证** - AppID + Token + Key 双重验证
+- 🌐 **REST API** - 完整的网关接口
+- 📡 **节点管理** - 自动发现和管理远程节点
+- 🔄 **任务分发** - 支持跨节点任务调度
+- 🛡️ **安全传输** - Token/Key 过期机制
+
+---
+
+## 🚀 快速开始
+
+### 1. 查看节点列表
+
+```bash
+cd ~/.openclaw/skills/openclaw-connect
+python3 scripts/cli.py list-nodes
+```
+
+### 2. 启动网关服务
+
+```bash
+# 前台运行
+python3 scripts/cli.py start
+
+# 后台运行
+./start.sh -d
+
+# 指定端口
+./start.sh -p 18790 -d
+```
+
+### 3. 添加新节点
+
+```bash
+python3 scripts/cli.py add-node \
+  --name "北京服务器" \
+  --ip "192.168.1.101" \
+  --port 18789 \
+  --capabilities code search
+```
+
+---
+
+## 📖 使用手册
+
+### 角色说明
+
+| 角色 | 说明 | 认证方式 |
+|------|------|----------|
+| **master** | 主核心，控制端 | Token |
+| **node** | 子节点，被控制端 | Key |
+
+### 配置文件
+
+配置文件位于 `config/` 目录：
+
+- `config/auth.json` - 认证配置（AppID、Token、Key）
+- `config/nodes.json` - 节点列表
+
+### API 接口
+
+| 方法 | 路径 | 说明 |
+|------|------|------|
+| GET | `/health` | 健康检查 |
+| POST | `/api/auth/login` | 登录认证 |
+| GET | `/api/node/list` | 节点列表 |
+| POST | `/api/node/heartbeat` | 节点心跳 |
+| POST | `/api/openclaw/proxy` | 代理接口 |
+| GET | `/api/openclaw/status` | 服务状态 |
+
+### 认证示例
+
+```bash
+# Token 登录（master）
+curl -X POST http://localhost:18790/api/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{"app_id": "master_xxx", "token": "your_token"}'
+
+# Key 登录（node）
+curl -X POST http://localhost:18790/api/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{"app_id": "node_xxx", "key": "your_key"}'
+```
+
+### 代理接口
+
+```bash
+# 获取节点列表
+curl -X POST http://localhost:18790/api/openclaw/proxy \
+  -H "Content-Type: application/json" \
+  -d '{"action": "list_nodes"}'
+
+# 获取单个节点
+curl -X POST http://localhost:18790/api/openclaw/proxy \
+  -H "Content-Type: application/json" \
+  -d '{"action": "get_node", "app_id": "node_xxx"}'
+
+# 分发任务
+curl -X POST http://localhost:18790/api/openclaw/proxy \
+  -H "Content-Type: application/json" \
+  -d '{"action": "dispatch", "app_id": "node_xxx", "message": "hello"}'
+```
+
+---
+
+## 🛠️ CLI 命令
+
+| 命令 | 说明 |
+|------|------|
+| `python3 scripts/cli.py list-nodes` | 列出所有节点 |
+| `python3 scripts/cli.py add-node --name X --ip Y` | 添加节点 |
+| `python3 scripts/cli.py remove-node --app-id X` | 移除节点 |
+| `python3 scripts/cli.py start` | 启动网关 |
+| `python3 scripts/cli.py test` | 测试连接 |
+
+---
+
+## 🔧 部署方式
+
+### Python 直接运行
+
+```bash
+cd ~/.openclaw/skills/openclaw-connect
+pip install aiohttp aiofiles
+python3 scripts/cli.py start --port 18790
+```
+
+### Docker 部署
+
+```bash
+# 构建镜像
+docker build -t openclaw-connect .
+
+# 运行容器
+docker run -d -p 18790:18790 openclaw-connect
+```
+
+### systemd 服务
+
+```bash
+# 复制服务文件
+sudo cp openclaw-connect.service /etc/systemd/system/
+
+# 启动服务
+sudo systemctl enable openclaw-connect
+sudo systemctl start openclaw-connect
+```
+
+详细部署说明见 [DEPLOY.md](./DEPLOY.md)
+
+---
+
+## 📁 项目结构
+
+```
+openclaw-connect/
+├── SKILL.md              # 本文件
+├── DEPLOY.md             # 部署指南
+├── start.sh              # 快速启动脚本
+├── config/
+│   ├── auth.json          # 认证配置
+│   └── nodes.json         # 节点配置
+└── scripts/
+    ├── connect.py         # 主连接器
+    ├── cli.py             # CLI 工具
+    ├── auth/
+    │   └── auth.py        # 认证系统
+    ├── gateway/
+    │   └── gateway.py     # REST 网关
+    ├── router.py          # 任务路由
+    ├── http_client.py     # HTTP 客户端
+    └── registry.py        # 节点注册
+```
+
+---
+
+## 🔐 安全说明
+
+1. **Token** - 长期凭证，用于 master 身份验证
+2. **Key** - 短期凭证（默认7天），用于 node 身份验证
+3. 定期更换 Key 可以提高安全性
+4. 不要把 Token/Key 分享给不信任的人
+
+---
+
+## 📞 支持
+
+- 查看状态：`python3 scripts/cli.py list-nodes`
+- 测试服务：`curl http://localhost:18790/health`
+- 查看日志：运行 `python3 scripts/cli.py start` 查看输出
